@@ -23,52 +23,63 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+
+import com.googlecode.flyway.core.util.jdbc.DriverDataSource;
 import org.javalite.activejdbc.Base;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
+
 public class Dao {
-    
+
     private final static Integer FETCH_LIMIT = 50;
     private final static org.slf4j.Logger logger = LoggerFactory.getLogger(Dao.class);
     private final Properties globalProps;
-    
+
     public Dao(Properties globalProps) {
         this.globalProps = globalProps;
     }
-    
+
     public void open() {
         Base.open(globalProps.getProperty("jdbcClass"), globalProps.getProperty("jdbcUrl"), globalProps.getProperty("jdbcUser"), globalProps.getProperty("jdbcPwd"));
     }
-    
+
     public void close() {
         Base.close();
     }
-    
+
     public void checkNCreate() {
         try {
             Flyway flyway = new Flyway();
-            flyway.setDataSource(globalProps.getProperty("jdbcUrl"), globalProps.getProperty("jdbcUser"), globalProps.getProperty("jdbcPwd"));
+            DataSource dataSource =
+                    new DriverDataSource(
+                            globalProps.getProperty("jdbcClass"),
+                            globalProps.getProperty("jdbcUrl"),
+                            globalProps.getProperty("jdbcUser"),
+                            globalProps.getProperty("jdbcPwd"));
+            flyway.setDataSource(dataSource);
             //Will wipe db each time. Avoid this in prod.
             if (globalProps.getProperty("env").equals("dev")) {
                 flyway.clean();
             }
             //Remove the above line if deploying to prod.
+            flyway.setInitOnMigrate(true);
             flyway.migrate();
         } catch (Exception ex) {
-            logger.error("Error trying to migrate db! Not severe hence proceeding forward.");
+            logger.error("Error trying to migrate db! Not severe hence proceeding forward.", ex);
         }
-        
+
     }
-    
+
     public List<History> fetchHistoryRecords() {
         this.open();
         List<History> history = History.findAll().orderBy("ID desc").limit(FETCH_LIMIT);
         history.size();
         this.close();
         return history;
-        
+
     }
-    
+
     public List<History> fetchHistoryRecordsByNode(String historyNode) {
         this.open();
         List<History> history = History.where("CHANGE_SUMMARY like ?", historyNode).orderBy("ID desc").limit(FETCH_LIMIT);
@@ -76,7 +87,7 @@ public class Dao {
         this.close();
         return history;
     }
-    
+
     public void insertHistory(String user, String ipAddress, String summary) {
         try {
             this.open();
@@ -94,6 +105,6 @@ public class Dao {
         } catch (Exception ex) {
             logger.error(Arrays.toString(ex.getStackTrace()));
         }
-        
+
     }
 }

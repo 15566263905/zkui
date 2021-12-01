@@ -47,11 +47,16 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
+        String configPath = "config.cfg";
+        if (args != null && args.length > 0) {
+            configPath = args[0];
+        }
+
         logger.debug("Starting ZKUI!");
         Properties globalProps = new Properties();
-        File f = new File("config.cfg");
+        File f = new File(configPath);
         if (f.exists()) {
-            globalProps.load(new FileInputStream("config.cfg"));
+            globalProps.load(new FileInputStream(configPath));
         } else {
             System.out.println("Please create config.cfg properties file and then execute the program!");
             System.exit(1);
@@ -86,7 +91,7 @@ public class Main {
         HttpConfiguration http_config = new HttpConfiguration();
         http_config.setSecureScheme("https");
         http_config.setSecurePort(Integer.parseInt(globalProps.getProperty("serverPort")));
-        
+
         if (globalProps.getProperty("https").equals("true")) {
             File keystoreFile = new File(globalProps.getProperty("keystoreFile"));
             SslContextFactory sslContextFactory = new SslContextFactory();
